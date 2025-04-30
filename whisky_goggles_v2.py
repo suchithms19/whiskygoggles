@@ -126,7 +126,9 @@ class WhiskyGogglesV2:
 
     def _download_and_cache_image(self, image_url: str) -> str:
         """Download and cache an image from URL, return path to cached file."""
-        if not image_url:
+        # Handle nan, None, or empty URLs
+        if pd.isna(image_url) or not image_url or image_url == 'nan':
+            print(f"Invalid image URL: {image_url}")
             return ""
             
         # Create filename from URL hash
@@ -198,12 +200,7 @@ class WhiskyGogglesV2:
         google_text = self.google_ocr_scan(image_path)
         print(f"Extracted text: {google_text[:100]}...")
         
-        # Step 2: Get initial matches based on text
-        print("Getting initial matches based on text...")
-        initial_matches = self.get_initial_matches(google_text)
-        print(f"Found {len(initial_matches)} initial matches")
-        
-        # Step 3: Load and preprocess query image
+        # Load and preprocess query image first as it's needed in both paths
         print("Loading and preprocessing query image...")
         query_img = cv2.imread(image_path)
         if query_img is None:
@@ -212,6 +209,21 @@ class WhiskyGogglesV2:
         query_processed = self.preprocess_image(query_img)
         query_keypoints, query_descriptors = self.extract_features(query_processed)
         print(f"Extracted {len(query_keypoints)} keypoints from query image")
+
+        # If no text found or text is too short, fall back to pure visual matching
+        if not google_text or len(google_text.strip()) < 3:
+            print("\nNo significant text found in image. Falling back to pure visual matching...")
+            return self._pure_visual_matching(query_keypoints, query_descriptors)
+        
+        # Step 2: Get initial matches based on text
+        print("Getting initial matches based on text...")
+        initial_matches = self.get_initial_matches(google_text)
+        print(f"Found {len(initial_matches)} initial matches")
+        
+        # If no text matches found, fall back to pure visual matching
+        if not initial_matches:
+            print("\nNo text matches found. Falling back to pure visual matching...")
+            return self._pure_visual_matching(query_keypoints, query_descriptors)
         
         # Step 4: Final matching combining SIFT and Google OCR
         print("\nPerforming final matching...")
@@ -232,8 +244,39 @@ class WhiskyGogglesV2:
                 final_matches.append(result)
         
         print(f"\nFound {len(final_matches)} matches above threshold")
-        # Return top 3 matches
+        # Return top 5 matches
         return sorted(final_matches, key=lambda x: x['confidence'], reverse=True)[:5]
+
+    def _pure_visual_matching(self, query_keypoints, query_descriptors) -> List[Dict]:
+        """Perform pure visual matching against all images in dataset."""
+        print("\nStarting pure visual matching against all images...")
+        visual_matches = []
+        
+        # Filter out entries with invalid image URLs
+        valid_entries = [entry for entry in self.dataset if not pd.isna(entry.get('image_url')) and entry.get('image_url')]
+        total_images = len(valid_entries)
+        
+        print(f"Found {total_images} valid images out of {len(self.dataset)} total entries")
+        
+        for idx, entry in enumerate(valid_entries):
+            try:
+                print(f"\rProcessing image {idx + 1}/{total_images}", end="", flush=True)
+                
+                # Get SIFT similarity
+                sift_score = self.match_features(query_keypoints, query_descriptors, entry.get('image_url', ''))
+                
+                if sift_score > 0.1:  # Minimum threshold for visual matching
+                    result = entry.copy()
+                    result['confidence'] = sift_score
+                    visual_matches.append(result)
+                    
+            except Exception as e:
+                print(f"\nError processing entry {idx}: {str(e)}")
+                continue
+        
+        print(f"\nFound {len(visual_matches)} visual matches above threshold")
+        # Return top 5 matches
+        return sorted(visual_matches, key=lambda x: x['confidence'], reverse=True)[:5]
 
 def main():
     """Test the improved bottle identification system."""
