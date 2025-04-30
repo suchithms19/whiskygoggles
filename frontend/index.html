@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spirit Recognition</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="loading-overlay">
+        <img src="loading.gif" alt="Loading...">
+        <div class="loading-text">Analyzing your spirit...</div>
+    </div>
+
+    <main class="container">
+        <h1>Whiskey Goggles</h1>
+        
+        <div class="upload-section">
+            <div class="upload-container" id="upload-container">
+                <div class="upload-content" id="upload-content">
+                    <img src="upload-icon.svg" alt="Upload" class="upload-icon">
+                    <p>Drag and drop your photo here or</p>
+                    <label for="file-upload" class="upload-button">Browse Files</label>
+                    <input type="file" id="file-upload" accept="image/*" hidden>
+                </div>
+                <div class="preview-container" id="preview-container">
+                    <img id="preview-image" src="#" alt="Preview">
+                    <button id="remove-image" class="remove-button" aria-label="Remove image">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button id="submit-button" class="submit-button" disabled>Recognize Spirit</button>
+        </div>
+
+        <div class="results-section" id="results-section">
+            <h2>Recommended Spirits</h2>
+            <div class="bottles-container">
+                <!-- Results will be dynamically inserted here -->
+            </div>
+        </div>
+    </main>
+    
+    <script src="script.js"></script>
+</body>
+</html>
