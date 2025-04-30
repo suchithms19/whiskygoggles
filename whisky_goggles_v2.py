@@ -8,6 +8,9 @@ from pathlib import Path
 import json
 from collections import defaultdict 
 from fuzzywuzzy import fuzz
+import requests
+import hashlib
+from urllib.parse import urlparse
 
 class WhiskyGogglesV2:
     def __init__(self, dataset_path: str):
@@ -18,6 +21,10 @@ class WhiskyGogglesV2:
         self.dataset = self.df.to_dict('records')
         self.sift = cv2.SIFT_create()
         self.matcher = cv2.BFMatcher()
+        
+        # Create cache directory for downloaded images
+        self.cache_dir = Path('image_cache')
+        self.cache_dir.mkdir(exist_ok=True)
         
         # Initialize Google Vision client with credentials
         try:
@@ -88,7 +95,7 @@ class WhiskyGogglesV2:
             return [], None
         return keypoints, descriptors
 
-    def get_initial_matches(self, text: str, max_matches: int = 40) -> List[Dict]:
+    def get_initial_matches(self, text: str, max_matches: int = 10) -> List[Dict]:
         """Get initial matches based on text similarity."""
         # Extract words from query text
         query_words = set(text.lower().split())
@@ -117,52 +124,106 @@ class WhiskyGogglesV2:
         
         return top_matches
 
-    def match_features(self, query_keypoints, query_descriptors, image_path: str) -> float:
+    def _download_and_cache_image(self, image_url: str) -> str:
+        """Download and cache an image from URL, return path to cached file."""
+        if not image_url:
+            return ""
+            
+        # Create filename from URL hash
+        url_hash = hashlib.md5(image_url.encode()).hexdigest()
+        file_ext = os.path.splitext(urlparse(image_url).path)[1] or '.jpg'
+        cached_path = self.cache_dir / f"{url_hash}{file_ext}"
+        
+        # If already cached, return cached path
+        if cached_path.exists():
+            return str(cached_path)
+            
+        try:
+            # Download image
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            
+            # Save to cache
+            with open(cached_path, 'wb') as f:
+                f.write(response.content)
+            return str(cached_path)
+        except Exception as e:
+            print(f"Failed to download image from {image_url}: {str(e)}")
+            return ""
+
+    def match_features(self, query_keypoints, query_descriptors, image_url: str) -> float:
         """Match SIFT features between query and reference image."""
-        if not os.path.exists(image_path):
+        print(f"Starting SIFT matching for image: {image_url}")
+        
+        if not image_url:
+            print("No image URL provided")
+            return 0.0
+        
+        # Download and cache the reference image
+        image_path = self._download_and_cache_image(image_url)
+        if not image_path:
+            print(f"Failed to download/cache image from {image_url}")
             return 0.0
         
         ref_img = cv2.imread(image_path)
         if ref_img is None:
+            print(f"Failed to load reference image from {image_path}")
             return 0.0
         
+        print(f"Processing reference image: {image_path}")
         ref_processed = self.preprocess_image(ref_img)
         ref_keypoints, ref_descriptors = self.extract_features(ref_processed)
         
         if query_descriptors is None or ref_descriptors is None:
+            print("No descriptors found for query or reference image")
             return 0.0
         
         try:
+            print(f"Found {len(query_keypoints)} query keypoints and {len(ref_keypoints)} reference keypoints")
             matches = self.matcher.knnMatch(query_descriptors, ref_descriptors, k=2)
             good_matches = [m for m, n in matches if m.distance < 0.7 * n.distance]
-            return len(good_matches) / len(query_keypoints) if query_keypoints else 0
-        except:
+            match_score = len(good_matches) / len(query_keypoints) if query_keypoints else 0
+            print(f"Found {len(good_matches)} good matches out of {len(matches)} total matches. Score: {match_score:.3f}")
+            return match_score
+        except Exception as e:
+            print(f"Error during feature matching: {str(e)}")
             return 0.0
 
     def identify_bottle(self, image_path: str) -> List[Dict]:
         """Main bottle identification function."""
+        print("\nStarting bottle identification process...")
+        
         # Step 1: Initial OCR with Google Vision
+        print("Performing Google Vision OCR...")
         google_text = self.google_ocr_scan(image_path)
+        print(f"Extracted text: {google_text[:100]}...")
         
         # Step 2: Get initial matches based on text
+        print("Getting initial matches based on text...")
         initial_matches = self.get_initial_matches(google_text)
+        print(f"Found {len(initial_matches)} initial matches")
         
         # Step 3: Load and preprocess query image
+        print("Loading and preprocessing query image...")
         query_img = cv2.imread(image_path)
         if query_img is None:
             raise ValueError("Failed to load query image")
         
         query_processed = self.preprocess_image(query_img)
         query_keypoints, query_descriptors = self.extract_features(query_processed)
+        print(f"Extracted {len(query_keypoints)} keypoints from query image")
         
         # Step 4: Final matching combining SIFT and Google OCR
+        print("\nPerforming final matching...")
         final_matches = []
         for match in initial_matches:
+            print(f"\nProcessing match: {match.get('name', 'Unknown')}")
             # Get SIFT similarity
-            sift_score = self.match_features(query_keypoints, query_descriptors, match.get('image_path', ''))
+            sift_score = self.match_features(query_keypoints, query_descriptors, match.get('image_url', ''))
             
             # Combine scores - adjusted weights since EasyOCR is removed
             final_score = 0.5 * match['text_score'] + 0.5 * sift_score
+            print(f"Final score: {final_score:.3f} (Text: {match['text_score']:.3f}, SIFT: {sift_score:.3f})")
             
             if final_score > 0.1:  # Minimum threshold
                 # Get all data from the original DataFrame row
@@ -170,8 +231,9 @@ class WhiskyGogglesV2:
                 result['confidence'] = final_score
                 final_matches.append(result)
         
+        print(f"\nFound {len(final_matches)} matches above threshold")
         # Return top 3 matches
-        return sorted(final_matches, key=lambda x: x['confidence'], reverse=True)[:3]
+        return sorted(final_matches, key=lambda x: x['confidence'], reverse=True)[:5]
 
 def main():
     """Test the improved bottle identification system."""
