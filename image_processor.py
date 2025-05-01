@@ -7,11 +7,39 @@ class ImageProcessor:
         """Initialize SIFT detector and matcher."""
         self.sift = cv2.SIFT_create()
         self.matcher = cv2.BFMatcher()
+        # Maximum dimensions for effective SIFT and OCR processing
+        self.MAX_IMAGE_DIMENSION = 4096
+        self.MIN_IMAGE_DIMENSION = 50
+
+    def validate_image_size(self, img: np.ndarray) -> np.ndarray:
+        """
+        Validate and resize image if necessary for SIFT and OCR processing.
+        Raises ValueError if image is too small or can't be processed.
+        """
+            
+        height, width = img.shape[:2]
+        
+        # Check minimum size
+        if width < self.MIN_IMAGE_DIMENSION or height < self.MIN_IMAGE_DIMENSION:
+            raise ValueError(f"Image is too small. Minimum dimension is {self.MIN_IMAGE_DIMENSION}px")
+            
+        # If image is too large, resize while maintaining aspect ratio
+        if width > self.MAX_IMAGE_DIMENSION or height > self.MAX_IMAGE_DIMENSION:
+            scale = self.MAX_IMAGE_DIMENSION / max(width, height)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            return cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_AREA)
+            
+        return img
 
     def preprocess_image(self, img: np.ndarray) -> np.ndarray:
         """Preprocess image for feature detection."""
         if img is None:
             raise ValueError("Invalid image provided")
+            
+        # Validate and resize image if necessary
+        img = self.validate_image_size(img)
+            
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Apply adaptive thresholding
