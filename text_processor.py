@@ -29,8 +29,8 @@ class TextProcessor:
             # Index relevant text fields
             text_fields = [
                 str(entry.get('name', '')),
-                str(entry.get('brand', '')),
-                str(entry.get('description', ''))
+                str(entry.get('abv', '')),
+                str(entry.get('spirit_type', ''))
             ]
             for field in text_fields:
                 words = set(field.lower().split())

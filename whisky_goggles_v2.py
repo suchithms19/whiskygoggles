@@ -26,26 +26,6 @@ class WhiskyGogglesV2:
         # Build text index
         self.text_index = self.text_processor.build_text_index(self.dataset)
         
-        # Create cache directory for downloaded images
-        self.cache_dir = Path('image_cache')
-        self.cache_dir.mkdir(exist_ok=True)
-        
-        # Initialize Google Vision client with credentials
-        try:
-            # First try environment variable
-            self.google_vision_client = vision.ImageAnnotatorClient()
-        except Exception as e:
-            # If environment variable fails, try local credentials
-            try:
-                local_credentials_path = os.path.join(os.path.dirname(__file__), 'google_credentials.json')
-                if os.path.exists(local_credentials_path):
-                    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = local_credentials_path
-                    self.google_vision_client = vision.ImageAnnotatorClient()
-                else:
-                    raise Exception("No Google Cloud credentials found. Please set GOOGLE_APPLICATION_CREDENTIALS or place google_credentials.json in the project directory.")
-            except Exception as inner_e:
-                raise Exception(f"Failed to initialize Google Vision client. Error: {str(inner_e)}")
-        
     def identify_bottle(self, image_path: str) -> List[Dict]:
         """Main bottle identification function."""
         print("\n[1/4] Starting bottle identification...")
