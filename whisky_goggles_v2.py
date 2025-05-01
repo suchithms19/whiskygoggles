@@ -26,14 +26,19 @@ class WhiskyGogglesV2:
         """Main bottle identification function."""
         print("\n[1/4] Starting bottle identification...")
         
-        # Step 1: Initial OCR with Google Vision
-        google_text = self.text_processor.google_ocr_scan(image_path)
-        
-        # Load and preprocess query image first as it's needed in both paths
+        # Load query image first to validate it
         query_img = cv2.imread(image_path)
         if query_img is None:
             raise ValueError("Failed to load query image")
+            
+        # Check blur and validate size before any processing
+        self.image_processor.check_blur(query_img)
+        self.image_processor.validate_image_size(query_img)
+
+        # Step 1: Initial OCR with Google Vision
+        google_text = self.text_processor.google_ocr_scan(query_img)
         
+        # Now preprocess for feature extraction
         query_processed = self.image_processor.preprocess_image(query_img)
         query_keypoints, query_descriptors = self.image_processor.extract_features(query_processed)
 

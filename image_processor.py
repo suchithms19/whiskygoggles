@@ -37,9 +37,6 @@ class ImageProcessor:
         if img is None:
             raise ValueError("Invalid image provided")
             
-        # Validate and resize image if necessary
-        img = self.validate_image_size(img)
-            
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Apply adaptive thresholding
@@ -74,4 +71,15 @@ class ImageProcessor:
             good_matches = [m for m, n in matches if m.distance < 0.7 * n.distance]
             return len(good_matches) / len(query_keypoints) if query_keypoints else 0
         except Exception:
-            return 0.0 
+            return 0.0
+
+    def check_blur(self, img: np.ndarray) -> None:
+        """
+        Check if image is blurry using Laplacian variance.
+        Raises ValueError if image is too blurry.
+        """
+        laplacian = cv2.Laplacian(img, cv2.CV_64F)
+        variance = laplacian.var()
+        
+        if variance < 10:
+            raise ValueError("Image is too blurry. Please upload again.") 
