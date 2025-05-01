@@ -1,6 +1,7 @@
 import cv2
 import pandas as pd
 from typing import List, Dict
+import os
 
 from image_processor import ImageProcessor
 from image_downloader import ImageDownloader
@@ -33,10 +34,20 @@ class WhiskyGogglesV2:
             
         # Check blur and validate size before any processing
         self.image_processor.check_blur(query_img)
-        self.image_processor.validate_image_size(query_img)
+        query_img = self.image_processor.validate_image_size(query_img)
+        
+        # Enchance lighting if needed
+        query_img = self.image_processor.enhance_lighting(query_img)
+
 
         # Step 1: Initial OCR with Google Vision
-        google_text = self.text_processor.google_ocr_scan(query_img)
+        # Save the processed image temporarily for OCR
+        temp_path = "temp_processed.jpg"
+        cv2.imwrite(temp_path, query_img)
+        google_text = self.text_processor.google_ocr_scan(temp_path)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
         
         # Now preprocess for feature extraction
         query_processed = self.image_processor.preprocess_image(query_img)

@@ -82,4 +82,47 @@ class ImageProcessor:
         variance = laplacian.var()
         
         if variance < 10:
-            raise ValueError("Image is too blurry. Please upload again.") 
+            raise ValueError("Image is too blurry. Please upload again.")
+
+    def enhance_lighting(self, img: np.ndarray) -> np.ndarray:
+        """
+        Enhance image lighting using CLAHE and gamma correction.
+        Only enhances if image is too dark or low contrast.
+        """
+        # Check current brightness and contrast
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        brightness = np.mean(gray)
+        contrast = np.std(gray)
+        
+        # Define thresholds (brightness: 0-255, contrast typically 0-100)
+        MIN_BRIGHTNESS = 80
+        MIN_CONTRAST = 40
+        
+        # Only enhance if image is too dark or low contrast
+        if brightness > MIN_BRIGHTNESS and contrast > MIN_CONTRAST:
+            print("[*] Image already well-lit, skipping enhancement")
+            return img
+            
+        print(f"[*] Enhancing dark/low-contrast image (brightness: {brightness:.1f}, contrast: {contrast:.1f})")
+        
+        # Convert to LAB color space
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # Apply CLAHE to L channel
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        enhanced_l = clahe.apply(l)
+        
+        # Merge channels back
+        enhanced_lab = cv2.merge([enhanced_l, a, b])
+        enhanced_bgr = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+        
+        # Apply gamma correction
+        gamma = 1.2
+        lookUpTable = np.empty((1,256), np.uint8)
+        for i in range(256):
+            lookUpTable[0,i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+        
+        return cv2.LUT(enhanced_bgr, lookUpTable)
+
+    
