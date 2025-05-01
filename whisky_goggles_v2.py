@@ -1,10 +1,6 @@
 import cv2
 import pandas as pd
-from google.cloud import vision
 from typing import List, Dict
-import os
-from pathlib import Path
-
 
 from image_processor import ImageProcessor
 from image_downloader import ImageDownloader

@@ -65,6 +65,7 @@ def recognize_spirit():
             formatted_results = []
             for result in cleaned_results:
                 formatted_result = {
+                    'id': result.get('id', ''),
                     'name': result.get('name', ''),
                     'size': result.get('size', ''),
                     'proof': result.get('proof', None),

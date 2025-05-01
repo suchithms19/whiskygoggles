@@ -25,6 +25,17 @@ body {
   padding: 40px 20px;
 }
 
+.logo-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.logo-wrapper img {
+  width: 120px;
+  height: auto;
+  margin-bottom: 24px;
+}
+
 h1 {
   font-size: 3.5rem;
   text-align: center;
@@ -222,12 +233,15 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 250px;
+  height: 300px;
 }
 
 .bottle-image img {
   width: 100%;
-  height: auto;
-  max-height: 400px;
+  height: 100%;
+  max-width: 250px;
+  max-height: 300px;
   object-fit: contain;
 }
 
@@ -320,7 +334,7 @@ h2 {
   color: #555;
 }
 
-.confidence, .text-score {
+.confidence, .text-score, .result-id {
   display: inline-block;
   padding: 8px 16px;
   border-radius: 6px;
@@ -336,6 +350,12 @@ h2 {
 .text-score {
   background: #E3F2FD;
   color: #1565C0;
+  margin-left: 10px;
+}
+
+.result-id {
+  background: #FFF3E0;
+  color: #E65100;
   margin-left: 10px;
 }
 

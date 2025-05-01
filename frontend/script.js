@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <img src="${result.image_url}" alt="${result.name}" onerror="this.src='bottle1.svg'">
               </div>
               <div class="bottle-info">
-                <h3>${result.name}</h3>
+              <h3>${result.name}</h3>  
                 <div class="details">
                   <p><strong>Type:</strong> ${result.spirit_type || 'N/A'}</p>
                   <p><strong>Size:</strong> ${result.size || 'N/A'}</p>
@@ -131,19 +131,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     </ul>
                   </div>
 
-                  <div class="stats-section">
-                    <h4>Stats</h4>
-                    <ul class="stats-list">
-                      <li>Total Score: ${result.total_score || 'N/A'}</li>
-                      <li>Ranking: ${result.ranking ? '#' + result.ranking : 'N/A'}</li>
-                      <li>Wishlist: ${result.wishlist_count}</li>
-                      <li>Votes: ${result.vote_count}</li>
-                    </ul>
-                  </div>
-
                   <div>
                     <span class="confidence">Match Confidence: ${result.confidence.toFixed(1)}%</span>
                     <span class="text-score">Text Match: ${(result.text_score * 100).toFixed(1)}%</span>
+                    <span class="result-id">Id: ${result.id}</span>
                   </div>
                 </div>
               </div>
