@@ -45,9 +45,12 @@ class WhiskyGogglesV2:
         temp_path = "temp_processed.jpg"
         cv2.imwrite(temp_path, query_img)
         google_text = self.text_processor.google_ocr_scan(temp_path)
+        
+        # Extract price using the same OCR text
+        extracted_price = self.text_processor.extract_price_from_image(temp_path, google_text)
+        
         if os.path.exists(temp_path):
             os.remove(temp_path)
-        
         
         # Now preprocess for feature extraction
         query_processed = self.image_processor.preprocess_image(query_img)
@@ -56,7 +59,7 @@ class WhiskyGogglesV2:
         # If no text found or text is too short, fall back to pure visual matching
         if not google_text or len(google_text.strip()) < 3:
             print("[2/4] No text found, using visual matching...")
-            matches = self._pure_visual_matching(query_keypoints, query_descriptors)
+            matches = self._pure_visual_matching(query_keypoints, query_descriptors, extracted_price)
             self._print_results(matches)
             return matches
         
@@ -67,7 +70,7 @@ class WhiskyGogglesV2:
         # If no text matches found, fall back to pure visual matching
         if not initial_matches:
             print("[3/4] No text matches found, using visual matching...")
-            matches = self._pure_visual_matching(query_keypoints, query_descriptors)
+            matches = self._pure_visual_matching(query_keypoints, query_descriptors, extracted_price)
             self._print_results(matches)
             return matches
         
@@ -93,6 +96,7 @@ class WhiskyGogglesV2:
             if final_score > 0.1:  # Minimum threshold
                 result = match.copy()
                 result['confidence'] = final_score
+                result['extracted_price'] = extracted_price
                 final_matches.append(result)
         
         print("[4/4] Finalizing results...")
@@ -100,7 +104,7 @@ class WhiskyGogglesV2:
         self._print_results(matches)
         return matches
 
-    def _pure_visual_matching(self, query_keypoints, query_descriptors) -> List[Dict]:
+    def _pure_visual_matching(self, query_keypoints, query_descriptors, extracted_price) -> List[Dict]:
         """Perform pure visual matching against all images in dataset."""
         visual_matches = []
         
@@ -130,6 +134,7 @@ class WhiskyGogglesV2:
                 if sift_score > 0.1:  # Minimum threshold for visual matching
                     result = entry.copy()
                     result['confidence'] = sift_score
+                    result['extracted_price'] = extracted_price
                     visual_matches.append(result)
                     
             except Exception:

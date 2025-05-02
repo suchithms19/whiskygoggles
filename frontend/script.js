@@ -9,8 +9,50 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultsSection = document.getElementById("results-section")
   const bottlesContainer = document.querySelector(".bottles-container")
   const loadingOverlay = document.querySelector(".loading-overlay")
+  const cameraButton = document.getElementById("camera-button")
 
   let selectedFile = null;
+  let stream = null;
+
+  // Handle camera button click
+  cameraButton.addEventListener("click", async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.style.display = 'none';
+      document.body.appendChild(video);
+      
+      video.onloadedmetadata = () => {
+        video.play();
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          // Create a File object from the blob
+          selectedFile = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+          
+          // Update preview
+          previewImage.src = canvas.toDataURL('image/jpeg');
+          uploadContent.style.display = "none";
+          previewContainer.style.display = "block";
+          submitButton.disabled = false;
+          
+          // Cleanup
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+          document.body.removeChild(video);
+        }, 'image/jpeg');
+      };
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      alert('Error accessing camera. Please make sure you have granted camera permissions.');
+    }
+  });
 
   // Handle file selection
   fileUpload.addEventListener("change", (e) => {
@@ -116,6 +158,12 @@ document.addEventListener("DOMContentLoaded", () => {
                   <div class="prices-section">
                     <h4>Prices</h4>
                     <ul class="price-list">
+                      ${result.extracted_price ? `
+                      <li>
+                        <span>Detected Price</span>
+                        <span>$${result.extracted_price.toFixed(2)}</span>
+                      </li>
+                      ` : ''}
                       <li>
                         <span>Average MSRP</span>
                         <span>${result.avg_msrp ? '$' + result.avg_msrp : 'N/A'}</span>

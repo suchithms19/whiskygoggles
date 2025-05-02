@@ -26,7 +26,10 @@
                 <div class="upload-content" id="upload-content">
                     <img src="upload-icon.svg" alt="Upload" class="upload-icon">
                     <p>Drag and drop your photo here or</p>
-                    <label for="file-upload" class="upload-button">Browse Files</label>
+                    <div class="button-group">
+                        <label for="file-upload" class="upload-button">Browse Files</label>
+                        <label id="camera-button" class="upload-button">Use Camera</label>
+                    </div>
                     <input type="file" id="file-upload" accept="image/*" hidden>
                 </div>
                 <div class="preview-container" id="preview-container">

@@ -51,7 +51,7 @@ def recognize_spirit():
             # Save the uploaded file
             file.save(filepath)
             
-            # Process the image
+            # Process the image for bottle recognition
             results = whisky_goggles.identify_bottle(filepath)
             
             # Clean up the uploaded file
@@ -81,7 +81,8 @@ def recognize_spirit():
                     'bar_count': result.get('bar_count', 0),
                     'ranking': result.get('ranking', None),
                     'text_score': result.get('text_score', 0),
-                    'confidence': round(result.get('confidence', 0) * 100, 2)
+                    'confidence': round(result.get('confidence', 0) * 100, 2),
+                    'extracted_price': result.get('extracted_price', None)
                 }
                 formatted_results.append(formatted_result)
             

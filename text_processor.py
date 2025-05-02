@@ -3,6 +3,7 @@ from collections import defaultdict
 from fuzzywuzzy import fuzz
 from google.cloud import vision
 import os
+import re
 
 class TextProcessor:
     def __init__(self):
@@ -75,4 +76,41 @@ class TextProcessor:
             entry['text_score'] = score / 100.0
             top_matches.append(entry)
         
-        return top_matches 
+        return top_matches
+
+    def extract_price_from_image(self, image_path: str, ocr_text: str = None) -> float:
+        """Extract price from bottle image using Google Vision OCR."""
+        try:
+            if ocr_text:
+                full_text = ocr_text
+            else:
+                with open(image_path, 'rb') as image_file:
+                    content = image_file.read()
+                image = vision.Image(content=content)
+                response = self.google_vision_client.text_detection(image=image)
+                texts = response.text_annotations
+                if not texts:
+                    return None
+                full_text = texts[0].description
+
+            # Regular expressions to match common price formats
+            price_patterns = [
+                r'\$\s*(\d+\.?\d{0,2})',  # $XX.XX or $XX
+                r'(\d+\.?\d{0,2})\s*dollars',  # XX.XX dollars or XX dollars
+                r'price[:\s]*\$?\s*(\d+\.?\d{0,2})',  # price: $XX.XX or price XX.XX
+                r'(\d+\.?\d{0,2})\s*\$'  # XX.XX$ or XX$
+            ]
+
+            for pattern in price_patterns:
+                matches = re.findall(pattern, full_text, re.IGNORECASE)
+                if matches:
+                    # Return the first valid price found
+                    try:
+                        return float(matches[0])
+                    except ValueError:
+                        continue
+
+            return None
+        except Exception as e:
+            print(f"Error extracting price: {str(e)}")
+            return None 

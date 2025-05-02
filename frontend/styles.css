@@ -78,10 +78,20 @@ h2 {
   text-align: center;
 }
 
+.upload-content p {
+  margin-bottom: 10px;
+}
+
 .upload-icon {
   width: 60px;
   height: 60px;
   margin-bottom: 15px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 .upload-button {
@@ -90,8 +100,8 @@ h2 {
   padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
-  margin-top: 15px;
   transition: background-color 0.3s ease;
+  margin-top: 0;
 }
 
 .upload-button:hover {
