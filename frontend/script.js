@@ -20,11 +20,41 @@ document.addEventListener("DOMContentLoaded", () => {
       stream = await navigator.mediaDevices.getUserMedia({ video: true });
       const video = document.createElement('video');
       video.srcObject = stream;
-      video.style.display = 'none';
-      document.body.appendChild(video);
+      video.autoplay = true;
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
       
-      video.onloadedmetadata = () => {
-        video.play();
+      // Create take photo button
+      const takePhotoBtn = document.createElement('button');
+      takePhotoBtn.textContent = 'Take Photo';
+      takePhotoBtn.className = 'upload-button take-photo-btn';
+      takePhotoBtn.style.position = 'absolute';
+      takePhotoBtn.style.bottom = '20px';
+      takePhotoBtn.style.left = '50%';
+      takePhotoBtn.style.transform = 'translateX(-50%)';
+      takePhotoBtn.style.zIndex = '10';
+      
+      // Clear upload content and show video
+      uploadContent.style.display = "none";
+      previewContainer.style.display = "none";
+      
+      // Create camera container
+      const cameraContainer = document.createElement('div');
+      cameraContainer.id = 'camera-container';
+      cameraContainer.style.position = 'absolute';
+      cameraContainer.style.top = '0';
+      cameraContainer.style.left = '0';
+      cameraContainer.style.width = '100%';
+      cameraContainer.style.height = '100%';
+      cameraContainer.style.backgroundColor = '#000';
+      
+      cameraContainer.appendChild(video);
+      cameraContainer.appendChild(takePhotoBtn);
+      uploadContainer.appendChild(cameraContainer);
+      
+      // Handle take photo button click
+      takePhotoBtn.addEventListener('click', () => {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -38,16 +68,16 @@ document.addEventListener("DOMContentLoaded", () => {
           
           // Update preview
           previewImage.src = canvas.toDataURL('image/jpeg');
-          uploadContent.style.display = "none";
+          cameraContainer.remove();
           previewContainer.style.display = "block";
           submitButton.disabled = false;
           
           // Cleanup
           stream.getTracks().forEach(track => track.stop());
           stream = null;
-          document.body.removeChild(video);
         }, 'image/jpeg');
-      };
+      });
+      
     } catch (err) {
       console.error('Error accessing camera:', err);
       alert('Error accessing camera. Please make sure you have granted camera permissions.');
