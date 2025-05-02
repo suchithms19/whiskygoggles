@@ -13,33 +13,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let selectedFile = null;
   let stream = null;
+  let usingFrontCamera = false;  // Track camera mode, starting with back camera
 
   // Handle camera button click
   cameraButton.addEventListener("click", async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const constraints = {
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
       const video = document.createElement('video');
       video.srcObject = stream;
       video.autoplay = true;
       video.style.width = '100%';
       video.style.height = '100%';
-      video.style.objectFit = 'cover';
+      video.style.objectFit = 'contain';
       
-      // Create take photo button
-      const takePhotoBtn = document.createElement('button');
-      takePhotoBtn.textContent = 'Take Photo';
-      takePhotoBtn.className = 'upload-button take-photo-btn';
-      takePhotoBtn.style.position = 'absolute';
-      takePhotoBtn.style.bottom = '20px';
-      takePhotoBtn.style.left = '50%';
-      takePhotoBtn.style.transform = 'translateX(-50%)';
-      takePhotoBtn.style.zIndex = '10';
+      await video.play();
       
-      // Clear upload content and show video
-      uploadContent.style.display = "none";
-      previewContainer.style.display = "none";
-      
-      // Create camera container
+      // Create camera container with proper styling
       const cameraContainer = document.createElement('div');
       cameraContainer.id = 'camera-container';
       cameraContainer.style.position = 'absolute';
@@ -48,10 +45,67 @@ document.addEventListener("DOMContentLoaded", () => {
       cameraContainer.style.width = '100%';
       cameraContainer.style.height = '100%';
       cameraContainer.style.backgroundColor = '#000';
+      cameraContainer.style.display = 'flex';
+      cameraContainer.style.alignItems = 'center';
+      cameraContainer.style.justifyContent = 'center';
       
+      // Create buttons container
+      const buttonsContainer = document.createElement('div');
+      buttonsContainer.style.position = 'absolute';
+      buttonsContainer.style.bottom = '20px';
+      buttonsContainer.style.left = '0';
+      buttonsContainer.style.right = '0';
+      buttonsContainer.style.display = 'flex';
+      buttonsContainer.style.justifyContent = 'center';
+      buttonsContainer.style.gap = '10px';
+      buttonsContainer.style.zIndex = '10';
+
+      // Take photo button
+      const takePhotoBtn = document.createElement('button');
+      takePhotoBtn.textContent = 'Take Photo';
+      takePhotoBtn.className = 'upload-button take-photo-btn';
+
+      // Switch camera button
+      const switchCameraBtn = document.createElement('button');
+      switchCameraBtn.textContent = '↺';
+      switchCameraBtn.className = 'upload-button switch-camera-btn';
+      switchCameraBtn.style.borderRadius = '50%';
+      switchCameraBtn.style.padding = '10px 15px';
+      
+      // Clear existing content
+      uploadContent.style.display = "none";
+      previewContainer.style.display = "none";
+      
+      // Append elements
+      buttonsContainer.appendChild(takePhotoBtn);
+      buttonsContainer.appendChild(switchCameraBtn);
       cameraContainer.appendChild(video);
-      cameraContainer.appendChild(takePhotoBtn);
+      cameraContainer.appendChild(buttonsContainer);
       uploadContainer.appendChild(cameraContainer);
+
+      // Handle switch camera click
+      switchCameraBtn.addEventListener('click', async () => {
+        usingFrontCamera = !usingFrontCamera;
+        const newConstraints = {
+          video: {
+            facingMode: usingFrontCamera ? 'user' : 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+
+        stream.getTracks().forEach(track => track.stop());
+
+        try {
+          // Start new stream
+          stream = await navigator.mediaDevices.getUserMedia(newConstraints);
+          video.srcObject = stream;
+          await video.play();
+        } catch (err) {
+          console.error('Error switching camera:', err);
+          alert('Error switching camera. Please try again.');
+        }
+      });
       
       // Handle take photo button click
       takePhotoBtn.addEventListener('click', () => {
@@ -59,6 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
+        
+        // Only flip for front camera
+        if (usingFrontCamera) {
+          ctx.scale(-1, 1);
+          ctx.translate(-canvas.width, 0);
+        }
         ctx.drawImage(video, 0, 0);
         
         // Convert canvas to blob
@@ -68,6 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
           
           // Update preview
           previewImage.src = canvas.toDataURL('image/jpeg');
+          previewImage.style.objectFit = 'contain';
           cameraContainer.remove();
           previewContainer.style.display = "block";
           submitButton.disabled = false;
@@ -165,70 +226,75 @@ document.addEventListener("DOMContentLoaded", () => {
         body: formData
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error('Server returned invalid response format');
+      }
 
-      if (response.ok) {
-        // Clear existing results
-        bottlesContainer.innerHTML = '';
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`);
+      }
 
-        // Add new results
-        data.results.forEach(result => {
-          const bottleHtml = `
-            <div class="bottle">
-              <div class="bottle-image">
-                <img src="${result.image_url}" alt="${result.name}" onerror="this.src='bottle1.svg'">
-              </div>
-              <div class="bottle-info">
-              <h3>${result.name}</h3>  
-                <div class="details">
-                  <p><strong>Type:</strong> ${result.spirit_type || 'N/A'}</p>
-                  <p><strong>Size:</strong> ${result.size || 'N/A'}</p>
-                  <p><strong>ABV:</strong> ${result.abv ? result.abv + '%' : 'N/A'} ${result.proof ? `(${result.proof} proof)` : ''}</p>
-                  
-                  <div class="prices-section">
-                    <h4>Prices</h4>
-                    <ul class="price-list">
-                      ${result.extracted_price ? `
-                      <li>
-                        <span>Detected Price</span>
-                        <span>$${result.extracted_price.toFixed(2)}</span>
-                      </li>
-                      ` : ''}
-                      <li>
-                        <span>Average MSRP</span>
-                        <span>${result.avg_msrp ? '$' + result.avg_msrp : 'N/A'}</span>
-                      </li>
-                      <li>
-                        <span>Fair Price</span>
-                        <span>${result.fair_price ? '$' + result.fair_price : 'N/A'}</span>
-                      </li>
-                      <li>
-                        <span>Shelf Price</span>
-                        <span>${result.shelf_price ? '$' + result.shelf_price : 'N/A'}</span>
-                      </li>
-                    </ul>
-                  </div>
+      // Clear existing results
+      bottlesContainer.innerHTML = '';
 
-                  <div>
-                    <span class="confidence">Match Confidence: ${result.confidence.toFixed(1)}%</span>
-                    <span class="text-score">Text Match: ${(result.text_score * 100).toFixed(1)}%</span>
-                    <span class="result-id">Id: ${result.id}</span>
-                  </div>
+      // Add new results
+      data.results.forEach(result => {
+        const bottleHtml = `
+          <div class="bottle">
+            <div class="bottle-image">
+              <img src="${result.image_url}" alt="${result.name}" onerror="this.src='bottle1.svg'">
+            </div>
+            <div class="bottle-info">
+            <h3>${result.name}</h3>  
+              <div class="details">
+                <p><strong>Type:</strong> ${result.spirit_type || 'N/A'}</p>
+                <p><strong>Size:</strong> ${result.size || 'N/A'}</p>
+                <p><strong>ABV:</strong> ${result.abv ? result.abv + '%' : 'N/A'} ${result.proof ? `(${result.proof} proof)` : ''}</p>
+                
+                <div class="prices-section">
+                  <h4>Prices</h4>
+                  <ul class="price-list">
+                    ${result.extracted_price ? `
+                    <li>
+                      <span>Detected Price</span>
+                      <span>$${result.extracted_price.toFixed(2)}</span>
+                    </li>
+                    ` : ''}
+                    <li>
+                      <span>Average MSRP</span>
+                      <span>${result.avg_msrp ? '$' + result.avg_msrp : 'N/A'}</span>
+                    </li>
+                    <li>
+                      <span>Fair Price</span>
+                      <span>${result.fair_price ? '$' + result.fair_price : 'N/A'}</span>
+                    </li>
+                    <li>
+                      <span>Shelf Price</span>
+                      <span>${result.shelf_price ? '$' + result.shelf_price : 'N/A'}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <span class="confidence">Match Confidence: ${result.confidence.toFixed(1)}%</span>
+                  <span class="text-score">Text Match: ${(result.text_score * 100).toFixed(1)}%</span>
+                  <span class="result-id">Id: ${result.id}</span>
                 </div>
               </div>
             </div>
-          `;
-          bottlesContainer.insertAdjacentHTML('beforeend', bottleHtml);
-        });
+          </div>
+        `;
+        bottlesContainer.insertAdjacentHTML('beforeend', bottleHtml);
+      });
 
-        resultsSection.style.display = "block";
-        resultsSection.scrollIntoView({ behavior: "smooth" });
-      } else {
-        alert(`Error: ${data.error}`);
-      }
+      resultsSection.style.display = "block";
+      resultsSection.scrollIntoView({ behavior: "smooth" });
     } catch (error) {
-      alert('Error processing image. Please try again.');
       console.error('Error:', error);
+      alert(error.message || 'Error processing image. Please try again.');
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = "Recognize Spirit";

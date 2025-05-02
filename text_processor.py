@@ -64,7 +64,7 @@ class TextProcessor:
         scored_candidates = []
         for idx in candidate_indices:
             entry = dataset[idx]
-            reference_text = f"{entry.get('name', '')} {entry.get('brand', '')} {entry.get('description', '')}"
+            reference_text = f"{entry.get('name', '')} {entry.get('abv', '')} {entry.get('spirit_type', '')}"
             score = fuzz.token_set_ratio(text, reference_text)
             scored_candidates.append((score, idx))
         

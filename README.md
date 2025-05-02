@@ -2,6 +2,9 @@
 
 A robust spirit recognition system that combines OCR and computer vision to identify bottles and extract pricing information.
 
+## 🎨 System Design
+For a detailed visual representation of how Whiskey Goggles works, check out our [system design diagram](https://www.mermaidchart.com/raw/fb1048f5-c1a8-4b96-a575-d2700ed22244?theme=light&version=v0.1&format=svg).
+
 ## 🎯 Features
 
 - **Dual Recognition System**: Combines Google Vision OCR and SIFT feature matching
@@ -13,9 +16,9 @@ A robust spirit recognition system that combines OCR and computer vision to iden
 
 1. **Primary Path (OCR + SIFT)**
    - Extracts text using Google Vision OCR
-   - Matches text against database
-   - Confirms matches using SIFT visual features
-   - Combines scores (50% text, 50% visual)
+   - Matches text against database (returns top 10 matches, configurable)
+   - Each text match is verified with SIFT visual features
+   - Final score combines text match (50%) and SIFT match (50%)
 
 2. **Fallback Path (Pure SIFT)**
    - Activates when:
