@@ -2,6 +2,8 @@ import cv2
 import pandas as pd
 from typing import List, Dict
 import os
+import csv
+from datetime import datetime
 
 from image_processor import ImageProcessor
 from image_downloader import ImageDownloader
@@ -23,6 +25,24 @@ class WhiskyGogglesV2:
         # Build text index
         self.text_index = self.text_processor.build_text_index(self.dataset)
         
+    def _log_results(self, matches: List[Dict]) -> None:
+        """Log results to CSV file."""
+        log_file = 'bottle_price_log.csv'
+        file_exists = os.path.exists(log_file)
+        
+        with open(log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['Date', 'Name', 'Detected Price', 'Shelf Price'])
+            
+            for match in matches:
+                writer.writerow([
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    match.get('name', ''),
+                    match.get('extracted_price', 'N/A'),
+                    match.get('shelf_price', 'N/A')
+                ])
+
     def identify_bottle(self, image_path: str) -> List[Dict]:
         """Main bottle identification function."""
         print("\n[1/4] Starting bottle identification...")
@@ -102,6 +122,7 @@ class WhiskyGogglesV2:
         print("[4/4] Finalizing results...")
         matches = sorted(final_matches, key=lambda x: x['confidence'], reverse=True)[:5]
         self._print_results(matches)
+        self._log_results(matches)
         return matches
 
     def _pure_visual_matching(self, query_keypoints, query_descriptors, extracted_price) -> List[Dict]:
@@ -143,6 +164,7 @@ class WhiskyGogglesV2:
         print("\n[4/4] Finalizing results...")
         matches = sorted(visual_matches, key=lambda x: x['confidence'], reverse=True)[:5]
         self._print_results(matches)
+        self._log_results(matches)
         return matches
 
     def _print_results(self, results: List[Dict]) -> None:

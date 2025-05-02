@@ -5,6 +5,7 @@ from whisky_goggles_v2 import WhiskyGogglesV2
 from flask_cors import CORS
 import math
 
+
 app = Flask(__name__, static_folder='frontend')
 CORS(app)
 
@@ -12,6 +13,11 @@ CORS(app)
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+# Configure image cache folder
+IMAGE_CACHE_FOLDER = 'image_cache'
+if not os.path.exists(IMAGE_CACHE_FOLDER):
+    os.makedirs(IMAGE_CACHE_FOLDER)
 
 # Initialize WhiskyGoggles
 whisky_goggles = WhiskyGogglesV2('data.csv')

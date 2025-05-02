@@ -76,7 +76,7 @@ class TextProcessor:
             entry['text_score'] = score / 100.0
             top_matches.append(entry)
         
-        return top_matches
+        return top_matches 
 
     def extract_price_from_image(self, image_path: str, ocr_text: str = None) -> float:
         """Extract price from bottle image using Google Vision OCR."""
